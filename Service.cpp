@@ -41,7 +41,7 @@ void Service::http_init() {
 
     evhttp_set_cb(http_handle_, "/checkface", check_face_handler, this);
     evhttp_set_cb(http_handle_, "/extractfeature", extract_face_feature, this);
-    evhttp_set_cb(http_handle_, "/comparefeature", compare_feature, this);
+    evhttp_set_cb(http_handle_, "/comparefeature", compare_feature_handler, this);
 
     evhttp_set_gencb(http_handle_,default_handler,NULL);
 
@@ -99,7 +99,7 @@ void Service::default_handler(struct evhttp_request *req, void *arg) {
     evhttp_send_reply(req, HTTP_OK, "OK", NULL);
 }
 
-
+//find
 int Service::search_eof(unsigned char*data,int size){
     for(int i=0;i<size;++i){
         if(data[i]=='\r' && data[i+1]=='\n'&&
@@ -108,10 +108,24 @@ int Service::search_eof(unsigned char*data,int size){
             return i+4;
         }
     }
+
+
+
+
+
+
     return -1;
 }
 
-void Service::save_image(struct evbuffer *buf, int file_size, std::string file_name) {
+int verify_file_size(int data_len,int file_size,int boundary_len)
+{
+    auto index = data_len-file_size-boundary_len-4-4;
+    return index;
+}
+
+
+
+void Service::save_image(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len) {
 
 
 
@@ -123,15 +137,29 @@ void Service::save_image(struct evbuffer *buf, int file_size, std::string file_n
 
 
     unsigned char* jpeg= evbuffer_pullup(buf,total_len);
+
     int index= search_eof(jpeg,total_len);
-   /* char* cache= (char*)malloc(file_size);
-    memset(cache, 0, file_size);
-    memcpy(cache, jpeg + index, file_size);*/
-    fwrite(jpeg+index, 1, file_size, file);
+    int verify_index = verify_file_size(total_len, file_size, boundary_len);
+    if(index==verify_index)
+        fwrite(jpeg+index, 1, file_size, file);
 
 
     fclose(file);
 }
+
+int boundary_len(const char* boundary)
+{
+    std::string tmp(boundary);
+    auto index = tmp.rfind("boundary=");
+    if (index == std::string::npos) {
+        return -1;
+    }
+
+    return tmp.length()-index-9;
+}
+
+
+
 
 void Service::check_face_handler(struct evhttp_request *req, void *arg) {
     auto service= (Service*)arg;
@@ -146,6 +174,21 @@ void Service::check_face_handler(struct evhttp_request *req, void *arg) {
         return;
     }
 
+    //print
+    for(auto header= list->tqh_first;header;header=header->next.tqe_next)
+    {
+        printf("%s:  %s\n", header->key, header->value);
+    }
+    //Content-Type:  multipart/form-data; boundary=----WebKitFormBoundaryIEOWvJgT1sHJWp6e
+
+    const char* tmp_boundary= evhttp_find_header(list,"Content-Type");
+    auto boundary = boundary_len(tmp_boundary);
+
+
+
+
+
+
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
         service->m_ImageFilePath= upload_file_name;
@@ -155,7 +198,7 @@ void Service::check_face_handler(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
-    service->save_image(input, file_size, service->m_ImageFilePath);
+    service->save_image(input, file_size, service->m_ImageFilePath, boundary);
     auto has_face = service->detect_face(service->m_ImageFilePath);
 
     struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
@@ -221,6 +264,9 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
         return;
     }
 
+    const char* tmp_boundary= evhttp_find_header(list,"Content-Type");
+    auto boundary = boundary_len(tmp_boundary);
+
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
         service->m_ImageFilePath= upload_file_name;
@@ -230,7 +276,7 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
-    service->save_image(input, file_size, service->m_ImageFilePath);
+    service->save_image(input, file_size, service->m_ImageFilePath, boundary);
     auto feature = service->extract_feature(service->m_ImageFilePath);
 
     struct evbuffer* output= evhttp_request_get_output_buffer(req);
@@ -244,9 +290,37 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     ::remove(service->m_ImageFilePath.c_str());
 }
 
-void Service::compare_feature(struct evhttp_request *req, void *arg) {
+void Service::compare_feature_handler(struct evhttp_request *req, void *arg) {
+    auto service= (Service*)arg;
+    if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
+        evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
+    }
+
+    struct evkeyvalq*list= evhttp_request_get_input_headers(req);
+
+    const char *feature_a_len = evhttp_find_header(list, "feature_a_len");
+    const char *feature_b_len = evhttp_find_header(list, "feature_b_len");
+    if (feature_b_len == nullptr ||feature_a_len == nullptr) {
+        evhttp_send_reply(req, HTTP_BADREQUEST, "feature param error!", NULL);
+    }
+    int lenA= std::stoi(feature_a_len);
+    int lenB= std::stoi(feature_b_len);
+    struct evbuffer* input_buffer= evhttp_request_get_input_buffer(req);
+    if(evbuffer_get_length(input_buffer)!=(lenA+lenB)){
+        evhttp_send_reply(req, HTTP_BADREQUEST, "PARAM ERROR!", NULL);
+    }
 
 
+    unsigned char *data = evbuffer_pullup(input_buffer, evbuffer_get_length(input_buffer));
 
+
+    float score= service->compare_feature((char*)data, lenA,
+                                          (char*)data + lenA, std::stoi(feature_b_len));
+
+    struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
+    evhttp_add_header(output_headers,"score",std::to_string(score).c_str());
+
+
+    evhttp_send_reply(req, HTTP_OK, "OK", NULL);
 
 }

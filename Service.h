@@ -32,7 +32,7 @@ public:
     static void check_face_handler(struct evhttp_request*req,void*arg);
     static void extract_face_feature(struct evhttp_request*req,void*arg);
 
-    static void compare_feature(struct evhttp_request *req, void *arg);
+    static void compare_feature_handler(struct evhttp_request *req, void *arg);
 
     int detect_face(std::string image_path);
     MGVL0_FEATURE_RESULT_S * extract_feature(std::string image_path);
@@ -48,7 +48,7 @@ private:
 
 //private function
     //save client upload image
-    void save_image(struct evbuffer *buf, int file_size, std::string file_name);
+    void save_image(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len);
     //search client upload image`s range
     int search_eof(unsigned char*data,int size);
 };
