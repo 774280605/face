@@ -108,12 +108,6 @@ int Service::search_eof(unsigned char*data,int size){
             return i+4;
         }
     }
-
-
-
-
-
-
     return -1;
 }
 
@@ -209,6 +203,10 @@ void Service::check_face_handler(struct evhttp_request *req, void *arg) {
     ::remove(service->m_ImageFilePath.c_str());
 }
 
+//// 人脸是否满足各种阈值限制 0:正常 1:不满足 roll 2:不满足 yaw
+////3:不满足 pitch 4:不满足 blur
+//// 5:不满足 face_min 6:不满足 brightness 7:脸部未全部在图片
+////范围内
 int Service::detect_face(std::string image_path) {
     auto ret = sdk_detect_face(&m_sdk_handle, (char*)image_path.c_str());
     if(ret){
@@ -217,7 +215,7 @@ int Service::detect_face(std::string image_path) {
     return ret;
 }
 
-MGVL0_FEATURE_RESULT_S * Service::extract_feature(std::string image_path) {
+MGVL0_FEATURE_RESULT_S * Service::extract_feature(std::string image_path, int &face_result_count) {
     MGVL0_FEATURE_RESULT_S *feature_result = NULL;
 
     int feature_result_count = 0;
@@ -227,7 +225,7 @@ MGVL0_FEATURE_RESULT_S * Service::extract_feature(std::string image_path) {
         DEBUG("sdk_detect_face_get_feature error !!!\n");
 
     }
-
+    face_result_count=feature_result_count;
     return feature_result;
 }
 
@@ -277,17 +275,20 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
     service->save_image(input, file_size, service->m_ImageFilePath, boundary);
-    auto feature = service->extract_feature(service->m_ImageFilePath);
+    int feature_result_count=0;
+    auto feature = service->extract_feature(service->m_ImageFilePath, feature_result_count);
 
     struct evbuffer* output= evhttp_request_get_output_buffer(req);
     evbuffer_add(output,feature->feature_data,feature->feature_length);
 
     struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
     evhttp_add_header(output_headers,"featuresize",std::to_string(feature->feature_length).c_str());
-
+    evhttp_add_header(output_headers,"feature_result_count",std::to_string(feature_result_count).c_str());
 
     evhttp_send_reply(req, HTTP_OK, "OK", NULL);
     ::remove(service->m_ImageFilePath.c_str());
+    //release feature
+    mgvl0_delete(feature);
 }
 
 void Service::compare_feature_handler(struct evhttp_request *req, void *arg) {

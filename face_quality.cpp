@@ -34,108 +34,19 @@ void usage(char **argv)
            argv[0]);         
 }
 
-int search_eof(unsigned char*data,int size){
-    for(int i=0;i<size;++i){
-        if(data[i]=='\r' && data[i+1]=='\n'&&
-        data[i+2]=='\r' && data[i+3]=='\n')
-        {
-            return i+4;
-        }
-    }
-    return -1;
-}
-
-
-
-
-//38905
-void save_image(struct evbuffer*buf){
-
-
-
-    FILE* file;
-    file= fopen("./content.jpeg","wb+");
-
-
-    unsigned char my_jpeg[39094]={0};
-    int len = evbuffer_get_length(buf);
-    unsigned char* jpeg= evbuffer_pullup(buf,len);
-    memcpy(my_jpeg,jpeg,39094);
-    int index= search_eof(my_jpeg,len);
-    fwrite(my_jpeg+143, 1, 38905, file);
-
-
-    fclose(file);
-}
 
 
 
 
 
 
-void check_face_handler(struct evhttp_request* req,void*arg)
-{
-    struct evbuffer*buf;
-    buf=evbuffer_new();
-    if(buf ==NULL);
-    switch (evhttp_request_get_command(req)) {
-        case EVHTTP_REQ_GET:
-            printf("http get\n");
-            break;
 
-    }
 
-    struct evkeyval* header;
-    struct evkeyvalq*list;
-    list= evhttp_request_get_input_headers(req);
-    for(header=list->tqh_first;header;header= header->next.tqe_next){
-        printf("   %s:    %s\n", header->key, header->value);
-    }
-
-    //evhttp_request_set_chunked_cb()
-
-    struct evbuffer* input;
-    input = evhttp_request_get_input_buffer(req);
-
-    save_image(input);
-
-    int len= evbuffer_get_length(input);
-    unsigned char *tmp = evbuffer_pullup(input, len);
-    //printf("%s\n",tmp);
-    FILE* file;
-    file= fopen("./content.txt","wb+");
-    while (evbuffer_get_length(input)){
-        int n;
-        char cbuf[128];
-        n = evbuffer_remove(input, cbuf, sizeof(cbuf));
-        if(n>0){
-            fwrite(cbuf, 1, n, file);
-        }
-    }
-
-    fclose(file);
-
-   /* struct evbuffer* output;
-    output = evhttp_request_get_output_buffer(req);
-    evbuffer_add(output,"my=123",6);*/
-
-    evbuffer_add_printf(buf,"zhangxiaofei");
-    evhttp_send_reply(req, HTTP_OK, "OK", buf);
-
-}
-
-void gen_handler(struct evhttp_request*req,void*arg)
-{
-    struct evbuffer*buf;
-    buf= evbuffer_new();
-    evbuffer_add_printf(buf, "welcome");
-    evhttp_send_reply(req, HTTP_OK, "OK", buf);
-}
 
 
 int main(int argc,char **argv)
 {
-    int   ret = DEMO_FAIL;
+    /*int   ret = DEMO_FAIL;
 	int   c = 0;
 	char  image1[DEMO_FILE_LEN+1] = {0};
     
@@ -143,20 +54,9 @@ int main(int argc,char **argv)
 	MGVL0_SDK_PARAM_S sdk_param = {};
 	MGVL0_MODEL_T model = NULL;
 	MGVL0_MODEL_CFG_S cfg = {};
-	SDK_HANDLE_S sdk_handle = {};
-
-   /* struct evhttp*http_handle;
-	event_init();
-    http_handle= evhttp_start("0.0.0.0",9527);
-    if(http_handle==NULL)
-        return 0;
-
-    evhttp_set_cb(http_handle, "/checkface", check_face_handler, NULL);
+	SDK_HANDLE_S sdk_handle = {};*/
 
 
-    evhttp_set_gencb(http_handle,gen_handler,NULL);
-
-    event_dispatch();*/
 
     Service service;
     service.init();
@@ -164,10 +64,10 @@ int main(int argc,char **argv)
 
 
 
+    return 0;
 
 
-
-	if(argc < 3)
+	/*if(argc < 3)
     {
         ret = DEMO_FAIL;
         usage(argv);
@@ -211,7 +111,7 @@ int main(int argc,char **argv)
 
 	cfg.type = MGVL0_MODEL_TYPE_DETECT;
 	ret = mgvl0_add_model("/home/zxf/Desktop/work/test/models/M_det_x86_v1.2.bin"
-	        /*DET_MODEL_FILE*/, &cfg, &model);
+	        *//*DET_MODEL_FILE*//*, &cfg, &model);
 	if(ret)
 	{
         DEBUG("mgvl0_add_model %s error !!!\n", DET_MODEL_FILE); 
@@ -248,5 +148,5 @@ EXIT1:
     mgvl0_deinit_sdk();
 
 EXIT:
-    return ret;
+    return ret;*/
 }

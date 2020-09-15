@@ -35,7 +35,7 @@ public:
     static void compare_feature_handler(struct evhttp_request *req, void *arg);
 
     int detect_face(std::string image_path);
-    MGVL0_FEATURE_RESULT_S * extract_feature(std::string image_path);
+    MGVL0_FEATURE_RESULT_S *extract_feature(std::string image_path, int &face_result_count);
     float compare_feature(char *featureA, int lenA, char *featureB, int lenB);
 private:
     struct evhttp*http_handle_;
