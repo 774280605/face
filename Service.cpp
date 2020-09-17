@@ -5,8 +5,8 @@
 #include "Service.h"
 #include <string>
 
-#define SERVICE_DET_MODEL_FILE      "../models/M_det_x86_v1.2.bin"
-#define SERVICE_FEATURE_MODEL_FILE  "../models/M_feature_x86_cusk_v1.2.bin"
+#define SERVICE_DET_MODEL_FILE      "./models/M_det_x86_v1.2.bin"
+#define SERVICE_FEATURE_MODEL_FILE  "./models/M_feature_x86_cusk_v1.2.bin"
 
 
 
@@ -278,6 +278,16 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     int feature_result_count=0;
     auto feature = service->extract_feature(service->m_ImageFilePath, feature_result_count);
 
+    //test
+   /* if(service->m_count==0){
+        memcpy(service->m_featureA, feature->feature_data, feature->feature_length);
+        service->m_count++;
+    } else {
+        memcpy(service->m_featureB, feature->feature_data, feature->feature_length);
+    }*/
+
+
+
     struct evbuffer* output= evhttp_request_get_output_buffer(req);
     evbuffer_add(output,feature->feature_data,feature->feature_length);
 
@@ -320,6 +330,8 @@ void Service::compare_feature_handler(struct evhttp_request *req, void *arg) {
 
     struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
     evhttp_add_header(output_headers,"score",std::to_string(score).c_str());
+
+    //float score = service->compare_feature((char*)service->m_featureA,516,(char*)service->m_featureB,516);
 
 
     evhttp_send_reply(req, HTTP_OK, "OK", NULL);

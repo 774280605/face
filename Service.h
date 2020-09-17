@@ -51,6 +51,10 @@ private:
     void save_image(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len);
     //search client upload image`s range
     int search_eof(unsigned char*data,int size);
+
+    unsigned char m_featureA[516];
+    unsigned char m_featureB[516];
+    int m_count{0};
 };
 
 
