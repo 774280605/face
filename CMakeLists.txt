@@ -9,7 +9,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include
 #pack
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 0)
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     add_definitions(-DENABLE_DEBUG)

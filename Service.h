@@ -28,15 +28,15 @@ public:
     void sdk_init();
     void run();
 
-    static void default_handler(struct evhttp_request*req,void*arg);
-    static void check_face_handler(struct evhttp_request*req,void*arg);
-    static void extract_face_feature(struct evhttp_request*req,void*arg);
+    static void defaultHandler(struct evhttp_request*req, void*arg);
+    static void checkFaceHandler(struct evhttp_request*req, void*arg);
+    static void extractFaceFeature(struct evhttp_request*req, void*arg);
 
-    static void compare_feature_handler(struct evhttp_request *req, void *arg);
+    static void compareFeatureHandler(struct evhttp_request *req, void *arg);
 
-    int detect_face(std::string image_path);
-    MGVL0_FEATURE_RESULT_S *extract_feature(std::string image_path, int &face_result_count);
-    float compare_feature(char *featureA, int lenA, char *featureB, int lenB);
+    int detectFace(std::string image_path);
+    MGVL0_FEATURE_RESULT_S *extractFeature(std::string image_path, int &face_result_count);
+    float compareFeature(char *featureA, int lenA, char *featureB, int lenB);
 private:
     struct evhttp*http_handle_;
     MGVL0_SDK_PARAM_S m_sdk_param {};
@@ -48,9 +48,9 @@ private:
 
 //private function
     //save client upload image
-    void save_image(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len);
+    void saveImage(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len);
     //search client upload image`s range
-    int search_eof(unsigned char*data,int size);
+    int searchEof(unsigned char*data, int size);
 
     unsigned char m_featureA[516];
     unsigned char m_featureB[516];

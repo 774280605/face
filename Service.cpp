@@ -39,11 +39,11 @@ void Service::http_init() {
     if(http_handle_==NULL)
         exit(-1);
 
-    evhttp_set_cb(http_handle_, "/checkface", check_face_handler, this);
-    evhttp_set_cb(http_handle_, "/extractfeature", extract_face_feature, this);
-    evhttp_set_cb(http_handle_, "/comparefeature", compare_feature_handler, this);
+    evhttp_set_cb(http_handle_, "/checkface", checkFaceHandler, this);
+    evhttp_set_cb(http_handle_, "/extractfeature", extractFaceFeature, this);
+    evhttp_set_cb(http_handle_, "/comparefeature", compareFeatureHandler, this);
 
-    evhttp_set_gencb(http_handle_,default_handler,NULL);
+    evhttp_set_gencb(http_handle_, defaultHandler, NULL);
 
 }
 
@@ -95,12 +95,12 @@ void Service::sdk_init() {
 
 }
 
-void Service::default_handler(struct evhttp_request *req, void *arg) {
+void Service::defaultHandler(struct evhttp_request *req, void *arg) {
     evhttp_send_reply(req, HTTP_OK, "OK", NULL);
 }
 
 //find
-int Service::search_eof(unsigned char*data,int size){
+int Service::searchEof(unsigned char*data, int size){
     for(int i=0;i<size;++i){
         if(data[i]=='\r' && data[i+1]=='\n'&&
            data[i+2]=='\r' && data[i+3]=='\n')
@@ -119,7 +119,7 @@ int verify_file_size(int data_len,int file_size,int boundary_len)
 
 
 
-void Service::save_image(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len) {
+void Service::saveImage(struct evbuffer *buf, int file_size, std::string file_name, int boundary_len) {
 
 
 
@@ -132,7 +132,7 @@ void Service::save_image(struct evbuffer *buf, int file_size, std::string file_n
 
     unsigned char* jpeg= evbuffer_pullup(buf,total_len);
 
-    int index= search_eof(jpeg,total_len);
+    int index= searchEof(jpeg, total_len);
     int verify_index = verify_file_size(total_len, file_size, boundary_len);
     if(index==verify_index)
         fwrite(jpeg+index, 1, file_size, file);
@@ -155,7 +155,7 @@ int boundary_len(const char* boundary)
 
 
 
-void Service::check_face_handler(struct evhttp_request *req, void *arg) {
+void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
     auto service= (Service*)arg;
      if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
          evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
@@ -192,8 +192,8 @@ void Service::check_face_handler(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
-    service->save_image(input, file_size, service->m_ImageFilePath, boundary);
-    auto has_face = service->detect_face(service->m_ImageFilePath);
+    service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
+    auto has_face = service->detectFace(service->m_ImageFilePath);
 
     struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
     evhttp_add_header(output_headers,"hasface",has_face==0?"true":"false");
@@ -207,7 +207,7 @@ void Service::check_face_handler(struct evhttp_request *req, void *arg) {
 ////3:不满足 pitch 4:不满足 blur
 //// 5:不满足 face_min 6:不满足 brightness 7:脸部未全部在图片
 ////范围内
-int Service::detect_face(std::string image_path) {
+int Service::detectFace(std::string image_path) {
     auto ret = sdk_detect_face(&m_sdk_handle, (char*)image_path.c_str());
     if(ret){
         DEBUG("sdk_detect_face error");
@@ -215,7 +215,7 @@ int Service::detect_face(std::string image_path) {
     return ret;
 }
 
-MGVL0_FEATURE_RESULT_S * Service::extract_feature(std::string image_path, int &face_result_count) {
+MGVL0_FEATURE_RESULT_S * Service::extractFeature(std::string image_path, int &face_result_count) {
     MGVL0_FEATURE_RESULT_S *feature_result = NULL;
 
     int feature_result_count = 0;
@@ -229,7 +229,7 @@ MGVL0_FEATURE_RESULT_S * Service::extract_feature(std::string image_path, int &f
     return feature_result;
 }
 
-float Service::compare_feature(char *featureA, int lenA, char *featureB, int lenB) {
+float Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB) {
     MGVL0_FEATURE_RESULT_S featureA_result={.feature_data=featureA,.feature_length=lenA};
     MGVL0_FEATURE_RESULT_S featureB_result={.feature_data=featureB,.feature_length= lenB};
 
@@ -249,7 +249,7 @@ float Service::compare_feature(char *featureA, int lenA, char *featureB, int len
     return compare_result;
 }
 
-void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
+void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     auto service= (Service*)arg;
     if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
         evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
@@ -274,9 +274,9 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
-    service->save_image(input, file_size, service->m_ImageFilePath, boundary);
+    service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
     int feature_result_count=0;
-    auto feature = service->extract_feature(service->m_ImageFilePath, feature_result_count);
+    auto feature = service->extractFeature(service->m_ImageFilePath, feature_result_count);
 
     //test
    /* if(service->m_count==0){
@@ -285,23 +285,31 @@ void Service::extract_face_feature(struct evhttp_request *req, void *arg) {
     } else {
         memcpy(service->m_featureB, feature->feature_data, feature->feature_length);
     }*/
+    if (feature->feature_length <= 0) {
+        struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
+        evhttp_add_header(output_headers,"hasface","false");
+        evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+        ::remove(service->m_ImageFilePath.c_str());
+    }else
+    {
+        struct evbuffer* output= evhttp_request_get_output_buffer(req);
+        evbuffer_add(output,feature->feature_data,feature->feature_length);
+
+        struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
+        evhttp_add_header(output_headers,"featuresize",std::to_string(feature->feature_length).c_str());
+        evhttp_add_header(output_headers,"feature_result_count",std::to_string(feature_result_count).c_str());
+
+        evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+        ::remove(service->m_ImageFilePath.c_str());
+        //release feature
+        mgvl0_delete(feature);
+    }
 
 
 
-    struct evbuffer* output= evhttp_request_get_output_buffer(req);
-    evbuffer_add(output,feature->feature_data,feature->feature_length);
-
-    struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
-    evhttp_add_header(output_headers,"featuresize",std::to_string(feature->feature_length).c_str());
-    evhttp_add_header(output_headers,"feature_result_count",std::to_string(feature_result_count).c_str());
-
-    evhttp_send_reply(req, HTTP_OK, "OK", NULL);
-    ::remove(service->m_ImageFilePath.c_str());
-    //release feature
-    mgvl0_delete(feature);
 }
 
-void Service::compare_feature_handler(struct evhttp_request *req, void *arg) {
+void Service::compareFeatureHandler(struct evhttp_request *req, void *arg) {
     auto service= (Service*)arg;
     if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
         evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
@@ -325,8 +333,8 @@ void Service::compare_feature_handler(struct evhttp_request *req, void *arg) {
     unsigned char *data = evbuffer_pullup(input_buffer, evbuffer_get_length(input_buffer));
 
 
-    float score= service->compare_feature((char*)data, lenA,
-                                          (char*)data + lenA, std::stoi(feature_b_len));
+    float score= service->compareFeature((char *) data, lenA,
+                                         (char *) data + lenA, std::stoi(feature_b_len));
 
     struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
     evhttp_add_header(output_headers,"score",std::to_string(score).c_str());
