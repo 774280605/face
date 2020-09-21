@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include "../../src/ErrorCode.h"
 #include "demo_comm.h"
 #include "sdk_comm_api.h"
 
@@ -341,7 +341,7 @@ int sdk_detect_face(SDK_HANDLE_S *sdk_handle, char *image_file)
 	if(ret)
 	{
 		DEBUG("sdk_read_jpeg error !!!\n"); 
-		ret = DEMO_FAIL; 
+		ret = ERR_READ_JPEG;
 		goto EXIT;
 	}
     
@@ -364,7 +364,7 @@ int sdk_detect_face(SDK_HANDLE_S *sdk_handle, char *image_file)
 	if(ret)
 	{
 		DEBUG("mgvl0_detect_face error !!!\n"); 
-		ret = DEMO_FAIL; 
+		ret = ERR_DETECT_FACE;
 		goto EXIT;
 	}
 
@@ -372,7 +372,7 @@ int sdk_detect_face(SDK_HANDLE_S *sdk_handle, char *image_file)
 	{
 		DEBUG("mgvl0_detect_face face count = 0 !!!\n"); 
         mgvl0_delete(detect_result);
-		ret = DEMO_FAIL; 
+		ret = ERR_FACE_LIST_NULL;
 		goto EXIT;
 	}
 
@@ -432,7 +432,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 	if(ret)
 	{
 		DEBUG("sdk_read_jpeg error !!!\n"); 
-		ret = DEMO_FAIL; 
+		ret = ERR_READ_JPEG;
 		goto EXIT;
 	}
     
@@ -455,7 +455,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 	if(ret)
 	{
 		DEBUG("mgvl0_detect_face error !!!\n"); 
-		ret = DEMO_FAIL; 
+		ret = ERR_DETECT_FACE;
 		goto EXIT;
 	}
 
@@ -463,7 +463,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 	{
 		DEBUG("mgvl0_detect_face face count = 0 !!!\n"); 
         mgvl0_delete(detect_result);
-		ret = DEMO_FAIL; 
+		ret = ERR_FACE_LIST_NULL;
 		goto EXIT;
 	}
 
@@ -471,7 +471,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 	if(NULL == face_image)
 	{
 		DEBUG("malloc error !!!\n"); 
-		ret = DEMO_FAIL; 
+		ret = ERR_MALLOC_MEMORY;
 		goto EXIT;
 	}
 
@@ -515,7 +515,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 		if(ret)
 		{
 			DEBUG("mgvl0_extract_feature error !!!\n"); 
-			ret = DEMO_FAIL; 
+			ret = ERR_EXTRACT_FEATURE;
 			goto EXIT;
 		}
 		else 
@@ -529,7 +529,7 @@ int sdk_detect_face_get_feature(SDK_HANDLE_S *sdk_handle, char *image_file, MGVL
 	{
 		*feature_result_count = 0;
         DEBUG("high quality face count = 0 !!!\n"); 
-        ret = DEMO_FAIL; 
+        ret = ERR_FACE_LIST_NULL;
         goto EXIT;
 	}
 

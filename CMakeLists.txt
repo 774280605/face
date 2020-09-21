@@ -45,11 +45,12 @@ add_definitions(-w)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 
-file(GLOB SRC_LIST "${PROJECT_SOURCE_DIR}/common/src/*.c")
+file(GLOB SRC_LIST "${PROJECT_SOURCE_DIR}/common/src/*.c"
+                    "${PROJECT_SOURCE_DIR}/src/*")
 link_directories(${PROJECT_SOURCE_DIR}/lib
                 ${PROJECT_SOURCE_DIR}/lib/3rd_lib)
 
-add_executable(zbk_service face_quality.cpp ${SRC_LIST} Service.cpp Service.h)
+add_executable(zbk_service face_quality.cpp ${SRC_LIST})
 
 target_link_libraries(zbk_service
         libjpeg.a

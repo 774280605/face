@@ -8,14 +8,12 @@
 #include <evhttp.h>
 #include <event.h>
 #include <string>
+#include <vector>
 #include "demo_comm.h"
 #include "sdk_config.h"
 #include "sdk_comm_api.h"
 
 #include "fsl0_interface.h"
-
-
-
 #include <jemalloc/jemalloc.h>
 
 class Service {
@@ -35,8 +33,12 @@ public:
     static void compareFeatureHandler(struct evhttp_request *req, void *arg);
 
     int detectFace(std::string image_path);
-    MGVL0_FEATURE_RESULT_S *extractFeature(std::string image_path, int &face_result_count);
-    float compareFeature(char *featureA, int lenA, char *featureB, int lenB);
+    int extractFeature(std::string image_path, int &face_result_count, MGVL0_FEATURE_RESULT_S *&face_result);
+    int compareFeature(char *featureA, int lenA, char *featureB, int lenB, float &score);
+
+    static void encodeBase64(std::vector<std::string>&result,MGVL0_FEATURE_RESULT_ST*feature_lists,int feature_lists_size);
+    static void base64ToJson(std::vector<std::string> &feature_lists, std::string &data);
+
 private:
     struct evhttp*http_handle_;
     MGVL0_SDK_PARAM_S m_sdk_param {};

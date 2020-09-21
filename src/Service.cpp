@@ -4,7 +4,11 @@
 
 #include "Service.h"
 #include <string>
-
+#include "HttpResponse.h"
+#include "encode.h"
+#include "cencode.h"
+#include <algorithm>
+#include "ErrorCode.h"
 #define SERVICE_DET_MODEL_FILE      "./models/M_det_x86_v1.2.bin"
 #define SERVICE_FEATURE_MODEL_FILE  "./models/M_feature_x86_cusk_v1.2.bin"
 
@@ -152,7 +156,11 @@ int boundary_len(const char* boundary)
     return tmp.length()-index-9;
 }
 
-
+/*{
+    "code":0
+    "data":
+    "reason":"success"
+}*/
 
 
 void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
@@ -160,11 +168,18 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
      if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
          evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
      }
-     struct evkeyvalq*list= evhttp_request_get_input_headers(req);
 
+
+     std::stringstream stream;
+    struct evbuffer* output= evhttp_request_get_output_buffer(req);
+     struct evkeyvalq*list= evhttp_request_get_input_headers(req);
      const char* filesize= evhttp_find_header(list,"filesize");
     if (filesize == NULL) {
-        evhttp_send_reply(req, HTTP_BADREQUEST, "file size is 0", NULL);
+        ErrResponse errResponse;
+        errResponse.setReason("filesize is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
         return;
     }
 
@@ -178,15 +193,17 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
     const char* tmp_boundary= evhttp_find_header(list,"Content-Type");
     auto boundary = boundary_len(tmp_boundary);
 
-
-
-
-
-
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
         service->m_ImageFilePath= upload_file_name;
-
+    else    {
+        ErrResponse errResponse;
+        errResponse.setReason("filename is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
 
 
     int file_size = std::stoi(filesize);
@@ -194,11 +211,25 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
     input = evhttp_request_get_input_buffer(req);
     service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
     auto has_face = service->detectFace(service->m_ImageFilePath);
+    if(has_face<0){
+        ErrResponse errResponse;
+        errResponse.setReason(getReason(has_face));
+        errResponse.getResponse(stream);
 
-    struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
-    evhttp_add_header(output_headers,"hasface",has_face==0?"true":"false");
 
-    evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
+    CheckFaceResponse checkFaceResponse(has_face==0?true:false);
+
+    checkFaceResponse.getResponse(stream);
+   const char*str_data=stream.str().c_str();
+
+   evbuffer_add(output, stream.str().c_str(), stream.str().length());
+
+    evhttp_send_reply(req, HTTP_OK, NULL, NULL);
     //delete template file
     ::remove(service->m_ImageFilePath.c_str());
 }
@@ -215,21 +246,20 @@ int Service::detectFace(std::string image_path) {
     return ret;
 }
 
-MGVL0_FEATURE_RESULT_S * Service::extractFeature(std::string image_path, int &face_result_count) {
-    MGVL0_FEATURE_RESULT_S *feature_result = NULL;
+int Service::extractFeature(std::string image_path, int &face_result_count, MGVL0_FEATURE_RESULT_S *&face_result) {
+
 
     int feature_result_count = 0;
-    auto ret = sdk_detect_face_get_feature(&m_sdk_handle, (char*)image_path.c_str(), &feature_result, &feature_result_count);
+    auto ret = sdk_detect_face_get_feature(&m_sdk_handle, (char*)image_path.c_str(), &face_result, &feature_result_count);
     if(ret)
     {
         DEBUG("sdk_detect_face_get_feature error !!!\n");
-
     }
     face_result_count=feature_result_count;
-    return feature_result;
+    return ret;
 }
 
-float Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB) {
+int Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB, float &score) {
     MGVL0_FEATURE_RESULT_S featureA_result={.feature_data=featureA,.feature_length=lenA};
     MGVL0_FEATURE_RESULT_S featureB_result={.feature_data=featureB,.feature_length= lenB};
 
@@ -239,14 +269,15 @@ float Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB
     if(ret)
     {
         DEBUG("mgvl0_compare_feature error !!!\n");
-        ret = DEMO_FAIL;
+        ret = ERR_COMPARE_FEATURE;
 
     }
     else
     {
         DEBUG("compare_1:1 scores=%f\n", compare_result);
     }
-    return compare_result;
+    score=compare_result;
+    return ret;
 }
 
 void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
@@ -254,11 +285,20 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
         evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
     }
+
+
+    std::stringstream stream;
+    struct evbuffer* output= evhttp_request_get_output_buffer(req);
     struct evkeyvalq*list= evhttp_request_get_input_headers(req);
 
     const char* filesize= evhttp_find_header(list,"filesize");
     if (filesize == NULL) {
-        evhttp_send_reply(req, HTTP_BADREQUEST, "file size is 0", NULL);
+        ErrResponse errResponse;
+
+        errResponse.setReason("filesize is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
         return;
     }
 
@@ -268,7 +308,15 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
         service->m_ImageFilePath= upload_file_name;
-
+    else
+    {
+        ErrResponse errResponse;
+        errResponse.setReason("filename is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
 
 
     int file_size = std::stoi(filesize);
@@ -276,33 +324,30 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     input = evhttp_request_get_input_buffer(req);
     service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
     int feature_result_count=0;
-    auto feature = service->extractFeature(service->m_ImageFilePath, feature_result_count);
+    MGVL0_FEATURE_RESULT_ST* feature_result= nullptr;
+    int ret = service->extractFeature(service->m_ImageFilePath, feature_result_count, feature_result);
 
-    //test
-   /* if(service->m_count==0){
-        memcpy(service->m_featureA, feature->feature_data, feature->feature_length);
-        service->m_count++;
-    } else {
-        memcpy(service->m_featureB, feature->feature_data, feature->feature_length);
-    }*/
-    if (feature->feature_length <= 0) {
-        struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
-        evhttp_add_header(output_headers,"hasface","false");
-        evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+    if (feature_result_count <= 0) {
+        ErrResponse errResponse;
+
+        errResponse.setReason("no face");
+
+        errResponse.getResponse(stream);
+
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
         ::remove(service->m_ImageFilePath.c_str());
     }else
     {
-        struct evbuffer* output= evhttp_request_get_output_buffer(req);
-        evbuffer_add(output,feature->feature_data,feature->feature_length);
+        ExtractFeatureResponse extractFeatureResponse(feature_result,feature_result_count);
+        extractFeatureResponse.getResponse(stream);
 
-        struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
-        evhttp_add_header(output_headers,"featuresize",std::to_string(feature->feature_length).c_str());
-        evhttp_add_header(output_headers,"feature_result_count",std::to_string(feature_result_count).c_str());
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
 
-        evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
         ::remove(service->m_ImageFilePath.c_str());
         //release feature
-        mgvl0_delete(feature);
+        mgvl0_delete(feature_result);
     }
 
 
@@ -314,34 +359,96 @@ void Service::compareFeatureHandler(struct evhttp_request *req, void *arg) {
     if( evhttp_request_get_command(req)!=EVHTTP_REQ_POST){
         evhttp_send_reply(req, HTTP_OK, "only support post req", NULL);
     }
-
+    std::stringstream stream;
+    struct evbuffer* output= evhttp_request_get_output_buffer(req);
     struct evkeyvalq*list= evhttp_request_get_input_headers(req);
 
     const char *feature_a_len = evhttp_find_header(list, "feature_a_len");
     const char *feature_b_len = evhttp_find_header(list, "feature_b_len");
     if (feature_b_len == nullptr ||feature_a_len == nullptr) {
-        evhttp_send_reply(req, HTTP_BADREQUEST, "feature param error!", NULL);
+        ErrResponse errResponse;
+        errResponse.setReason("feature param error!");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_BADREQUEST, NULL, NULL);
+        return ;
     }
     int lenA= std::stoi(feature_a_len);
     int lenB= std::stoi(feature_b_len);
     struct evbuffer* input_buffer= evhttp_request_get_input_buffer(req);
     if(evbuffer_get_length(input_buffer)!=(lenA+lenB)){
-        evhttp_send_reply(req, HTTP_BADREQUEST, "PARAM ERROR!", NULL);
+        ErrResponse errResponse;
+        errResponse.setReason("PARAM ERROR!");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_BADREQUEST, NULL, NULL);
+        return;
     }
 
 
     unsigned char *data = evbuffer_pullup(input_buffer, evbuffer_get_length(input_buffer));
+    float score=0.0;
 
+    auto ret= service->compareFeature((char *) data, lenA,
+                                         (char *) data + lenA, std::stoi(feature_b_len), score);
 
-    float score= service->compareFeature((char *) data, lenA,
-                                         (char *) data + lenA, std::stoi(feature_b_len));
+    if(ret!=0){
+        ErrResponse errResponse;
+        errResponse.setReason(getReason(ret));
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
 
-    struct evkeyvalq*output_headers= evhttp_request_get_output_headers(req);
-    evhttp_add_header(output_headers,"score",std::to_string(score).c_str());
+    CompareFeatureResponse compareFeatureResponse(score);
+    compareFeatureResponse.getResponse(stream);
 
+    evbuffer_add(output, stream.str().c_str(), stream.str().length());
     //float score = service->compare_feature((char*)service->m_featureA,516,(char*)service->m_featureB,516);
 
 
-    evhttp_send_reply(req, HTTP_OK, "OK", NULL);
+    evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+
+}
+
+void Service::encodeBase64(std::vector<std::string> &result, MGVL0_FEATURE_RESULT_ST *feature_lists,
+                           int feature_lists_size) {
+    for (int i = 0; i < feature_lists_size; ++i) {
+        base64::encoder ec;
+        base64_init_encodestate(&ec._state);
+        std::vector<char> buffer(feature_lists[i].feature_length<<1);
+        auto count = ec.encode(feature_lists[i].feature_data, feature_lists[i].feature_length, buffer.data());
+        count += ec.encode_end(buffer.data() + count);
+        result.push_back(std::string(buffer.data(),buffer.data()+count));
+    }
+
+}
+/*
+ * {
+		"feature_len": 123,
+		"data": "zzzzzzzzzz"
+	},
+
+	{
+		"feature_len": 123,
+		"data": "zzzzzzzzzz"
+	},
+	{
+		"feature_len": 123,
+		"data": "zzzzzzzzzz"
+	}
+ * */
+void Service::base64ToJson(std::vector<std::string> &feature_lists, std::string &data) {
+
+    std::stringstream ss;
+    for (int i = 0; i < feature_lists.size(); ++i) {
+        ss << "{" << "\"featureLen\":" << feature_lists[i].length() << ",";
+        ss << "\"data\":" << "\"" << feature_lists[i].c_str() << "\""<<"},";
+    }
+
+    data= ss.str();
+    data.erase(data.length() - 1);
+    data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
 
 }
