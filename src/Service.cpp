@@ -191,7 +191,7 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
     //Content-Type:  multipart/form-data; boundary=----WebKitFormBoundaryIEOWvJgT1sHJWp6e
 
     const char* tmp_boundary= evhttp_find_header(list,"Content-Type");
-    auto boundary = boundary_len(tmp_boundary);
+    int boundary = boundary_len(tmp_boundary);
 
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
@@ -209,8 +209,21 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
+    if(evbuffer_get_length(input)==0){
+        ErrResponse errResponse;
+        errResponse.setReason("file data is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
+
+
+
+
+
     service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
-    auto has_face = service->detectFace(service->m_ImageFilePath);
+    int has_face = service->detectFace(service->m_ImageFilePath);
     if(has_face<0){
         ErrResponse errResponse;
         errResponse.setReason(getReason(has_face));
@@ -239,7 +252,7 @@ void Service::checkFaceHandler(struct evhttp_request *req, void *arg) {
 //// 5:不满足 face_min 6:不满足 brightness 7:脸部未全部在图片
 ////范围内
 int Service::detectFace(std::string image_path) {
-    auto ret = sdk_detect_face(&m_sdk_handle, (char*)image_path.c_str());
+    int ret = sdk_detect_face(&m_sdk_handle, (char*)image_path.c_str());
     if(ret){
         DEBUG("sdk_detect_face error");
     }
@@ -265,7 +278,7 @@ int Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB, 
 
 
     float compare_result = 0.0;
-    auto ret = mgvl0_compare_feature(m_sdk_handle.compare_handle, &featureA_result, &featureB_result, &compare_result);
+    int ret = mgvl0_compare_feature(m_sdk_handle.compare_handle, &featureA_result, &featureB_result, &compare_result);
     if(ret)
     {
         DEBUG("mgvl0_compare_feature error !!!\n");
@@ -303,7 +316,7 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     }
 
     const char* tmp_boundary= evhttp_find_header(list,"Content-Type");
-    auto boundary = boundary_len(tmp_boundary);
+    int boundary = boundary_len(tmp_boundary);
 
     const char *upload_file_name = evhttp_find_header(list, "filename");
     if(upload_file_name!=NULL)
@@ -322,6 +335,15 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     int file_size = std::stoi(filesize);
     struct evbuffer* input;
     input = evhttp_request_get_input_buffer(req);
+    if(evbuffer_get_length(input)==0){
+        ErrResponse errResponse;
+        errResponse.setReason("file data is NULL");
+        errResponse.getResponse(stream);
+        evbuffer_add(output, stream.str().c_str(), stream.str().length());
+        evhttp_send_reply(req, HTTP_OK, NULL, NULL);
+        return;
+    }
+
     service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
     int feature_result_count=0;
     MGVL0_FEATURE_RESULT_ST* feature_result= nullptr;
@@ -389,7 +411,7 @@ void Service::compareFeatureHandler(struct evhttp_request *req, void *arg) {
     unsigned char *data = evbuffer_pullup(input_buffer, evbuffer_get_length(input_buffer));
     float score=0.0;
 
-    auto ret= service->compareFeature((char *) data, lenA,
+    int ret= service->compareFeature((char *) data, lenA,
                                          (char *) data + lenA, std::stoi(feature_b_len), score);
 
     if(ret!=0){
@@ -418,7 +440,7 @@ void Service::encodeBase64(std::vector<std::string> &result, MGVL0_FEATURE_RESUL
         base64::encoder ec;
         base64_init_encodestate(&ec._state);
         std::vector<char> buffer(feature_lists[i].feature_length<<1);
-        auto count = ec.encode(feature_lists[i].feature_data, feature_lists[i].feature_length, buffer.data());
+        int count = ec.encode(feature_lists[i].feature_data, feature_lists[i].feature_length, buffer.data());
         count += ec.encode_end(buffer.data() + count);
         result.push_back(std::string(buffer.data(),buffer.data()+count));
     }

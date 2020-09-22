@@ -61,6 +61,10 @@ CheckFaceResponse::CheckFaceResponse(bool hasFace):m_hasFace(hasFace) {
 
 }
 
+CheckFaceResponse::~CheckFaceResponse() {
+
+}
+
 void ExtractFeatureResponse::getResponse(std::stringstream &stream) {
 
 
@@ -111,6 +115,10 @@ void ExtractFeatureResponse::base64ToJson(std::vector<std::string> &feature_list
     data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
 }
 
+ExtractFeatureResponse::~ExtractFeatureResponse() {
+
+}
+
 void ErrResponse::getResponse(std::stringstream &stream) {
     stream<<"{";
     stream<<"\"code\":"<<-1<<",";//eg:"code":0
@@ -118,6 +126,14 @@ void ErrResponse::getResponse(std::stringstream &stream) {
     stream<<"\"data\":"<<"{";
     stream<<"}";
     stream<<"}";
+}
+
+ErrResponse::~ErrResponse() {
+
+}
+
+ErrResponse::ErrResponse() {
+
 }
 
 CompareFeatureResponse::CompareFeatureResponse(float score):m_score(score) {
@@ -133,4 +149,8 @@ void CompareFeatureResponse::getResponse(std::stringstream &stream) {
     stream<<m_score;
     stream<<"}";
     stream<<"}";
+}
+
+CompareFeatureResponse::~CompareFeatureResponse() {
+
 }

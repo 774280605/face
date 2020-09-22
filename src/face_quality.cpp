@@ -21,7 +21,7 @@
 
 #include "fsl0_interface.h"
 
-#include "src/Service.h"
+#include "Service.h"
 
 
 void usage(char **argv)

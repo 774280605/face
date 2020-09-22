@@ -46,8 +46,8 @@ namespace base64
 			base64_init_encodestate(&_state);
 			//
 			const int N = _buffersize;
-			char* plaintext = new char[N];
-			char* code = new char[2*N];
+			char* plaintext = (char*)malloc(sizeof(char)*N); //new char[N];
+			char* code = (char*)malloc(sizeof(char)*N*2);//new char[2*N];
 			int plainlength;
 			int codelength;
 
@@ -66,8 +66,8 @@ namespace base64
 			//
 			base64_init_encodestate(&_state);
 
-			delete [] code;
-			delete [] plaintext;
+			free(code);//delete [] code;
+            free(plaintext); //delete [] plaintext;
 		}
 	};
 

@@ -30,11 +30,11 @@ protected:
 
 class ErrResponse: public HttpResponse{
 public:
-    ErrResponse()=default;
-    virtual ~ErrResponse()=default;
+    ErrResponse();
+    virtual ~ErrResponse();
 
 
-    void getResponse(std::stringstream &stream) override;
+    virtual void getResponse(std::stringstream &stream);
 
 
 };
@@ -44,9 +44,9 @@ public:
 class CheckFaceResponse: public HttpResponse {
 public:
     CheckFaceResponse(bool hasFace);
-    virtual ~CheckFaceResponse()=default;
+    virtual ~CheckFaceResponse();
 
-    void getResponse(std::stringstream &stream) override;
+    virtual void getResponse(std::stringstream &stream);
 
 private:
     bool m_hasFace;
@@ -55,10 +55,10 @@ private:
 class ExtractFeatureResponse: public HttpResponse{
 public:
     ExtractFeatureResponse(MGVL0_FEATURE_RESULT_ST*feature,int size);
-    virtual ~ExtractFeatureResponse()=default;
+    virtual ~ExtractFeatureResponse();
 
 
-    void getResponse(std::stringstream &stream) override;
+    virtual void getResponse(std::stringstream &stream);
 
 private:
     static void encodeBase64(std::vector<std::string>&result,MGVL0_FEATURE_RESULT_ST*feature_lists,int feature_lists_size);
@@ -74,9 +74,9 @@ class CompareFeatureResponse: public HttpResponse{
 public:
     CompareFeatureResponse(float score);
 
-    virtual ~CompareFeatureResponse() = default;
+    virtual ~CompareFeatureResponse();
 
-    void getResponse(std::stringstream &stream) override;
+    virtual void getResponse(std::stringstream &stream);
 
 private:
     float m_score;
