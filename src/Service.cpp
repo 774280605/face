@@ -9,6 +9,7 @@
 #include "cencode.h"
 #include <algorithm>
 #include "ErrorCode.h"
+#include "decode.h"
 #define SERVICE_DET_MODEL_FILE      "./models/M_det_x86_v1.2.bin"
 #define SERVICE_FEATURE_MODEL_FILE  "./models/M_feature_x86_cusk_v1.2.bin"
 
@@ -273,8 +274,19 @@ int Service::extractFeature(std::string image_path, int &face_result_count, MGVL
 }
 
 int Service::compareFeature(char *featureA, int lenA, char *featureB, int lenB, float &score) {
-    MGVL0_FEATURE_RESULT_S featureA_result={.feature_data=featureA,.feature_length=lenA};
-    MGVL0_FEATURE_RESULT_S featureB_result={.feature_data=featureB,.feature_length= lenB};
+    char feature_decode_a[4096] = {0};
+    char feature_decode_b[4096] = {0};
+    int feature_decode_a_len= DecodeBase64(featureA,lenA,feature_decode_a);
+    int feature_decode_b_len=DecodeBase64(featureB, lenB, feature_decode_b);
+   /* {
+        FILE* t=  fopen("./featureb","wb+");
+        fwrite(feature_decode_a, feature_decode_a_len, 1, t);
+        fclose(t);
+    }*/
+
+
+    MGVL0_FEATURE_RESULT_S featureA_result={.feature_data=feature_decode_a,.feature_length=feature_decode_a_len};
+    MGVL0_FEATURE_RESULT_S featureB_result={.feature_data=feature_decode_b,.feature_length= feature_decode_b_len};
 
 
     float compare_result = 0.0;
@@ -347,8 +359,16 @@ void Service::extractFaceFeature(struct evhttp_request *req, void *arg) {
     service->saveImage(input, file_size, service->m_ImageFilePath, boundary);
     int feature_result_count=0;
     MGVL0_FEATURE_RESULT_ST* feature_result= nullptr;
-    int ret = service->extractFeature(service->m_ImageFilePath, feature_result_count, feature_result);
 
+
+    int ret = service->extractFeature(service->m_ImageFilePath, feature_result_count, feature_result);
+    //test
+   /* {
+        FILE* t=  fopen("./featurea","wb+");
+        fwrite(feature_result->feature_data, feature_result->feature_length, 1, t);
+        fclose(t);
+
+    }*/
     if (feature_result_count <= 0) {
         ErrResponse errResponse;
 
@@ -398,7 +418,10 @@ void Service::compareFeatureHandler(struct evhttp_request *req, void *arg) {
     int lenA= std::stoi(feature_a_len);
     int lenB= std::stoi(feature_b_len);
     struct evbuffer* input_buffer= evhttp_request_get_input_buffer(req);
-    if(evbuffer_get_length(input_buffer)!=(lenA+lenB)){
+    int input_len=evbuffer_get_length(input_buffer);
+
+
+    if(input_len<(lenA+lenB)){
         ErrResponse errResponse;
         errResponse.setReason("PARAM ERROR!");
         errResponse.getResponse(stream);
@@ -407,12 +430,11 @@ void Service::compareFeatureHandler(struct evhttp_request *req, void *arg) {
         return;
     }
 
-
     unsigned char *data = evbuffer_pullup(input_buffer, evbuffer_get_length(input_buffer));
     float score=0.0;
 
     int ret= service->compareFeature((char *) data, lenA,
-                                         (char *) data + lenA, std::stoi(feature_b_len), score);
+                                         (char *) data + lenA, lenB, score);
 
     if(ret!=0){
         ErrResponse errResponse;
@@ -473,4 +495,11 @@ void Service::base64ToJson(std::vector<std::string> &feature_lists, std::string 
     data.erase(data.length() - 1);
     data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
 
+}
+
+int Service::DecodeBase64(char *data, int in_len, char *out) {
+    base64::decoder decoder;
+    base64_init_decodestate(&decoder._state);
+    int len=  decoder.decode(data, in_len, out);
+    return len;
 }

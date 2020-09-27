@@ -38,7 +38,7 @@ public:
 
     static void encodeBase64(std::vector<std::string>&result,MGVL0_FEATURE_RESULT_ST*feature_lists,int feature_lists_size);
     static void base64ToJson(std::vector<std::string> &feature_lists, std::string &data);
-
+    static int DecodeBase64(char*data, int in_len, char*out);
 private:
     struct evhttp*http_handle_;
     MGVL0_SDK_PARAM_S m_sdk_param {};

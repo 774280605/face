@@ -21,7 +21,7 @@
 
 #include "fsl0_interface.h"
 
-#include "Service.h"
+#include "src/Service.h"
 
 
 void usage(char **argv)
@@ -46,16 +46,23 @@ void usage(char **argv)
 
 int main(int argc,char **argv)
 {
-    /*int   ret = DEMO_FAIL;
-	int   c = 0;
-	char  image1[DEMO_FILE_LEN+1] = {0};
-    
-	const char* version = NULL;
-	MGVL0_SDK_PARAM_S sdk_param = {};
-	MGVL0_MODEL_T model = NULL;
-	MGVL0_MODEL_CFG_S cfg = {};
-	SDK_HANDLE_S sdk_handle = {};*/
 
+    /*{
+        FILE* a= fopen("./featurea","rb+");
+        FILE* b= fopen("./featureb","rb+");
+        char buffer_a[4096] = {0};
+        char buffer_b[4096] = {0};
+        unsigned long   a_len= fread(buffer_a, 4096, 1, a);
+        unsigned long   b_len= fread(buffer_b, 4096, 1, b);
+        for (int i = 0; i < 516; ++i) {
+            if(buffer_a[i]!=buffer_b[i]){
+                printf("encode error\n");
+                break;
+            }
+        }
+        fclose(a);
+        fclose(b);
+    }*/
 
 
     Service service;

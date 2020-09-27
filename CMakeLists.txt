@@ -50,7 +50,7 @@ file(GLOB SRC_LIST "${PROJECT_SOURCE_DIR}/common/src/*.c"
 link_directories(${PROJECT_SOURCE_DIR}/lib
                 ${PROJECT_SOURCE_DIR}/lib/3rd_lib)
 
-add_executable(zbk_service src/face_quality.cpp ${SRC_LIST})
+add_executable(zbk_service face_quality.cpp ${SRC_LIST})
 
 target_link_libraries(zbk_service
         libjpeg.a

@@ -98,21 +98,25 @@ void ExtractFeatureResponse::encodeBase64(std::vector<std::string> &result, MGVL
         std::vector<char> buffer(feature_lists[i].feature_length<<1);
         auto count = ec.encode(feature_lists[i].feature_data, feature_lists[i].feature_length, buffer.data());
         count += ec.encode_end(buffer.data() + count);
-        result.push_back(std::string(buffer.data(),buffer.data()+count));
+
+        std::string tmp(buffer.data(),buffer.data()+count);
+        tmp.erase(std::remove(tmp.begin(), tmp.end(), '\n'), tmp.end());
+        result.push_back(tmp);
     }
 
 }
 
 void ExtractFeatureResponse::base64ToJson(std::vector<std::string> &feature_lists, std::string &data) {
+
+
     std::stringstream ss;
     for (int i = 0; i < feature_lists.size(); ++i) {
         ss << "{" << "\"featureLen\":" << feature_lists[i].length() << ",";
         ss << "\"data\":" << "\"" << feature_lists[i].c_str() << "\""<<"},";
     }
-
     data= ss.str();
     data.erase(data.length() - 1);
-    data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
+
 }
 
 ExtractFeatureResponse::~ExtractFeatureResponse() {
