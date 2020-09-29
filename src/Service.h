@@ -26,18 +26,18 @@ public:
     void sdk_init();
     void run();
 
-    static void defaultHandler(struct evhttp_request*req, void*arg);
-    static void checkFaceHandler(struct evhttp_request*req, void*arg);
-    static void extractFaceFeature(struct evhttp_request*req, void*arg);
+    static void DefaultHandler(struct evhttp_request*req, void*arg);
+    static void CheckFaceHandler(struct evhttp_request*req, void*arg);
+    static void ExtractFaceFeature(struct evhttp_request*req, void*arg);
 
-    static void compareFeatureHandler(struct evhttp_request *req, void *arg);
+    static void CompareFeatureHandler(struct evhttp_request *req, void *arg);
 
-    int detectFace(std::string image_path);
-    int extractFeature(std::string image_path, int &face_result_count, MGVL0_FEATURE_RESULT_S *&face_result);
-    int compareFeature(char *featureA, int lenA, char *featureB, int lenB, float &score);
+    int DetectFace(std::string image_path);
+    int ExtractFeature(std::string image_path, int &face_result_count, MGVL0_FEATURE_RESULT_S *&face_result);
+    int CompareFeature(char *featureA, int lenA, char *featureB, int lenB, float &score);
 
-    static void encodeBase64(std::vector<std::string>&result,MGVL0_FEATURE_RESULT_ST*feature_lists,int feature_lists_size);
-    static void base64ToJson(std::vector<std::string> &feature_lists, std::string &data);
+    static void EncodeBase64(std::vector<std::string>&result, MGVL0_FEATURE_RESULT_ST*feature_lists, int feature_lists_size);
+   // static void Base64TRRoJson(std::vector<std::string> &feature_lists, std::string &data);
     static int DecodeBase64(char*data, int in_len, char*out);
 private:
     struct evhttp*http_handle_;
