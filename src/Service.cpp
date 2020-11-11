@@ -10,8 +10,8 @@
 #include <algorithm>
 #include "ErrorCode.h"
 #include "decode.h"
-#define SERVICE_DET_MODEL_FILE      "./models/M_det_x86_v1.2.bin"
-#define SERVICE_FEATURE_MODEL_FILE  "./models/M_feature_x86_cusk_v1.2.bin"
+#define SERVICE_DET_MODEL_FILE      "./models/meg_x86_detctor_C_fp_v1.3.bin"
+#define SERVICE_FEATURE_MODEL_FILE  "./models/meg_x86_feature_H_fp_v1.8.bin"
 
 
 
@@ -367,12 +367,12 @@ void Service::ExtractFaceFeature(struct evhttp_request *req, void *arg) {
 
     int ret = service->ExtractFeature(service->m_ImageFilePath, feature_result_count, feature_result);
     //test
-   /* {
-        FILE* t=  fopen("./featurea","wb+");
+   {
+        FILE* t=  fopen("./feature","wb");
         fwrite(feature_result->feature_data, feature_result->feature_length, 1, t);
         fclose(t);
 
-    }*/
+    }
     if (feature_result_count <= 0) {
         ErrResponse errResponse;
 

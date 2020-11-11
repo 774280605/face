@@ -20,7 +20,7 @@
 #include "sdk_comm_api.h"
 
 #include "fsl0_interface.h"
-
+#include <fstream>
 #include "src/Service.h"
 
 
@@ -47,22 +47,39 @@ void usage(char **argv)
 int main(int argc,char **argv)
 {
 
-    /*{
-        FILE* a= fopen("./featurea","rb+");
-        FILE* b= fopen("./featureb","rb+");
-        char buffer_a[4096] = {0};
-        char buffer_b[4096] = {0};
-        unsigned long   a_len= fread(buffer_a, 4096, 1, a);
-        unsigned long   b_len= fread(buffer_b, 4096, 1, b);
-        for (int i = 0; i < 516; ++i) {
-            if(buffer_a[i]!=buffer_b[i]){
-                printf("encode error\n");
-                break;
+    {
+        std::ifstream ifs;
+        ifs.open("./feature",std::ios::binary|std::ios::in);
+        char aBuffer[516]={0};
+        ifs.read(aBuffer,516);
+        auto len= ifs.gcount();
+        if(len<0)
+        {
+            printf("\n");
+        }
+
+        std::ifstream ifs_b;
+        ifs_b.open("./featureb", std::ios::binary | std::ios::in);
+        char bBuffer[512] = {0};
+        ifs_b.read(bBuffer,512);
+        auto len_b= ifs_b.gcount();
+        if(len_b){
+            printf("\n");
+
+        }
+
+        for(auto i=0;i<256;++i)
+        {
+            if(aBuffer[i]!=bBuffer[i])
+            {
+                printf("error\n");
             }
         }
-        fclose(a);
-        fclose(b);
-    }*/
+
+
+
+
+    }
 
 
     Service service;
